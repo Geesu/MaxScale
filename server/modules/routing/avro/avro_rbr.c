@@ -503,6 +503,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
         ss_dassert(create->columns == map->columns);
         avro_value_get_by_name(record, create->column_names[i], &field, NULL);
 
+        MXS_INFO("avro_value_get_by_name '%s'",
+                 create->column_names[i]);
+
         if (bit_is_set(columns_present, ncolumns, i))
         {
             npresent++;
@@ -529,6 +532,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                         MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
                     }
                     avro_value_set_string(&field, strval);
+                    MXS_INFO("fixed_string_enum: '%s'", strval);
+
                     ptr += bytes;
                     ss_dassert(ptr < end);
                 }
@@ -540,6 +545,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     str[bytes] = '\0';
                     avro_value_set_string(&field, str);
                     ptr += bytes + 1;
+
+                    MXS_INFO("fixed_string: '%s'", str);
+
                     ss_dassert(ptr < end);
                 }
             }
@@ -589,6 +597,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 buf[sz] = '\0';
                 ptr += sz;
                 avro_value_set_string(&field, buf);
+                MXS_INFO("variable_string_found: '%s' Len: %d", buf, (int)sz);
+                
                 ss_dassert(ptr < end);
             }
             else if (column_is_blob(map->column_types[i]))
@@ -598,6 +608,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
                 avro_value_set_bytes(&field, ptr, len);
+                MXS_INFO("blob: '%s' Len: %d", ptr, (int)len);
+
                 ptr += len;
                 ss_dassert(ptr < end);
             }
