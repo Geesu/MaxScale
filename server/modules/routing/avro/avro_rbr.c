@@ -503,14 +503,13 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
         ss_dassert(create->columns == map->columns);
         avro_value_get_by_name(record, create->column_names[i], &field, NULL);
 
-        MXS_INFO("avro_value_get_by_name '%s'",
-                 create->column_names[i]);
-
         if (bit_is_set(columns_present, ncolumns, i))
         {
             npresent++;
             if (bit_is_set(null_bitmap, ncolumns, i))
             {
+                MXS_INFO("'%s': NULL", create->column_names[i]);
+
                 avro_value_set_null(&field);
             }
             else if (column_is_fixed_string(map->column_types[i]))
@@ -532,7 +531,8 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                         MXS_WARNING("ENUM/SET values larger than 255 values aren't supported.");
                     }
                     avro_value_set_string(&field, strval);
-                    MXS_INFO("fixed_string_enum: '%s'", strval);
+
+                    MXS_INFO("fixed_string_is_enum '%s': %s'", create->column_names[i], strval);
 
                     ptr += bytes;
                     ss_dassert(ptr < end);
@@ -546,7 +546,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     avro_value_set_string(&field, str);
                     ptr += bytes + 1;
 
-                    MXS_INFO("fixed_string: '%s'", str);
+                    MXS_INFO("!fixed_string_is_enum '%s': %s'", create->column_names[i], str);
 
                     ss_dassert(ptr < end);
                 }
@@ -567,6 +567,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                     MXS_WARNING("BIT is not currently supported, values are stored as 0.");
                 }
                 avro_value_set_int(&field, value);
+
+                MXS_INFO("is_bit '%s': %ld", create->column_names[i], value);
+
                 ptr += bytes;
                 ss_dassert(ptr < end);
             }
@@ -575,6 +578,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 double f_value = 0.0;
                 ptr += unpack_decimal_field(ptr, metadata + metadata_offset, &f_value);
                 avro_value_set_double(&field, f_value);
+
+                MXS_INFO("column_is_decimal '%s': %f", create->column_names[i], f_value);
+
                 ss_dassert(ptr < end);
             }
             else if (column_is_variable_string(map->column_types[i]))
@@ -596,8 +602,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
                 ptr += sz;
-                //avro_value_set_string(&field, buf);
-                MXS_INFO("variable_string_found: '%s' Len: %d", buf, (int)sz);
+                avro_value_set_string(&field, buf);
+
+                MXS_INFO("column_is_variable_string '%s': '%s' Length: %d", create->column_names[i], buf, (int)sz);
 
                 ss_dassert(ptr < end);
             }
@@ -608,12 +615,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
 
-                char buf[bytes + 1];
-                memcpy(buf, ptr, bytes);
-                buf[sz] = '\0';
+                avro_value_set_bytes(&field, ptr, len);
 
-                avro_value_set_bytes(&field, buf, len);
-                MXS_INFO("blob: '%s' Len: %d", ptr, (int)len);
+                MXS_INFO("column_is_blob '%s': '%s' Length: %d", create->column_names[i], ptr, (int)len);
 
                 ptr += len;
                 ss_dassert(ptr < end);
@@ -625,6 +629,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_temporal_value(map->column_types[i], ptr, &metadata[metadata_offset], &tm);
                 format_temporal_value(buf, sizeof(buf), map->column_types[i], &tm);
                 avro_value_set_string(&field, buf);
+
+                MXS_INFO("column_is_temporal '%s': '%s'", create->column_names[i], buf);
+
                 ss_dassert(ptr < end);
             }
             /** All numeric types (INT, LONG, FLOAT etc.) */
@@ -635,6 +642,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 ptr += unpack_numeric_field(ptr, map->column_types[i],
                                             &metadata[metadata_offset], lval);
                 set_numeric_field_value(&field, map->column_types[i], &metadata[metadata_offset], lval);
+
+                MXS_INFO("NUMERIC '%s'", create->column_names[i]);
+
                 ss_dassert(ptr < end);
             }
             ss_dassert(metadata_offset <= map->column_metadata_size);
