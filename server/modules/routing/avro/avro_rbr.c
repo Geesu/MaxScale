@@ -607,7 +607,12 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                //avro_value_set_bytes(&field, ptr, len);
+
+                char buf[bytes + 1];
+                memcpy(buf, ptr, bytes);
+                buf[sz] = '\0';
+
+                avro_value_set_bytes(&field, buf, len);
                 MXS_INFO("blob: '%s' Len: %d", ptr, (int)len);
 
                 ptr += len;
