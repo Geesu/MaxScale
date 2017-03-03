@@ -596,9 +596,9 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 memcpy(buf, ptr, sz);
                 buf[sz] = '\0';
                 ptr += sz;
-                avro_value_set_string(&field, buf);
+                //avro_value_set_string(&field, buf);
                 MXS_INFO("variable_string_found: '%s' Len: %d", buf, (int)sz);
-                
+
                 ss_dassert(ptr < end);
             }
             else if (column_is_blob(map->column_types[i]))
@@ -607,7 +607,7 @@ uint8_t* process_row_event_data(TABLE_MAP *map, TABLE_CREATE *create, avro_value
                 uint64_t len = 0;
                 memcpy(&len, ptr, bytes);
                 ptr += bytes;
-                avro_value_set_bytes(&field, ptr, len);
+                //avro_value_set_bytes(&field, ptr, len);
                 MXS_INFO("blob: '%s' Len: %d", ptr, (int)len);
 
                 ptr += len;
